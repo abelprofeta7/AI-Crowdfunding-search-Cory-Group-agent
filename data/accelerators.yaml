@@ -1,0 +1,12 @@
+# Hardware hubs from the strategy doc. Add more freely; each is contacted once
+# with the free "Crowdfunding Go-To-Market Masterclass" partnership offer.
+- {name: HAX (SOSV), focus: "Hardware, robotics, physical tech", location: "Newark, NJ & Shenzhen", website: "https://hax.co"}
+- {name: mHUB, focus: "Hardtech, physical products, prototyping", location: "Chicago, IL", website: "https://www.mhubchicago.com"}
+- {name: Greentown Labs, focus: "Climatetech, hardware, energy", location: "Boston, MA & Houston, TX", website: "https://greentownlabs.com"}
+- {name: EvoNexus, focus: "IoT, hardware, consumer electronics", location: "San Diego, CA", website: "https://evonexus.org"}
+- {name: Brinc, focus: "Hardware, connected devices, consumer tech", location: "Hong Kong / Global", website: "https://www.brinc.io"}
+- {name: ventureLAB Hardware Catalyst, focus: "Hardware, consumer tech, silicon", location: "Toronto, Canada", website: "https://www.venturelab.ca"}
+- {name: AlphaLab Gear, focus: "Robotics, physical products", location: "Pittsburgh, PA", website: "https://www.alphalabgear.org"}
+- {name: LA Cleantech Incubator (LACI), focus: "Hardware, mobility, consumer tech", location: "Los Angeles, CA", website: "https://laincubator.org"}
+- {name: Lemnos, focus: "Hardware venture fund", location: "San Francisco, CA", website: "https://www.lemnos.vc"}
+- {name: Hardware Club, focus: "Hardware VC & community", location: "Paris / Global", website: "https://www.hardwareclub.co"}

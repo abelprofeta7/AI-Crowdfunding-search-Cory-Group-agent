@@ -1,0 +1,85 @@
+# Cory Group lead machine configuration.
+# Secrets (API keys, SMTP passwords) never go here: they are read from
+# environment variables / GitHub Actions secrets (see docs/SETUP.md).
+
+agency:
+  name: Cory Group
+  website: https://corygroup.co
+  sender_name: "Your Name"          # signs every email
+  sender_title: "Partner"
+  booking_link: "https://calendly.com/your-link/15min"
+  # CAN-SPAM requires a real postal address in every commercial email.
+  postal_address: "Cory Group, 123 Example St, City, ST 00000, USA"
+  # Real, verifiable proof points ONLY. The AI is told never to invent results,
+  # so anything you leave out simply won't be claimed.
+  proof_points: []
+    # - "Helped a modular EDC brand raise $412k on Kickstarter in 30 days"
+
+pipeline:
+  daily_target: 50            # new prospects contacted (or queued) per day
+  min_fit_score: 60           # 0-100, from the qualification agent
+  max_candidates_per_run: 400 # hard stop on raw candidates processed per run
+  recontact_after_days: 180   # never re-pitch the same domain sooner than this
+
+# Model per stage. Default is Claude Opus 5.5. To cut AI cost roughly 4-5x,
+# set these to claude-haiku-4-5 (see README "Costs").
+llm:
+  qualify_model: claude-opus-5-5
+  qualify_effort: low
+  writer_model: claude-opus-5-5
+  writer_effort: medium
+  replies_model: claude-opus-5-5
+  replies_effort: low
+
+sources:
+  kickstarter_upcoming:
+    enabled: true
+    # Technology, Design, Games (tabletop lives under Games)
+    category_ids: [16, 7, 12]
+    pages_per_category: 3
+  preorder_stores:
+    enabled: true             # needs a web search provider (see below)
+    queries_per_run: 12
+  indiegogo:
+    enabled: true             # needs a web search provider
+    queries_per_run: 4
+  hackernews:
+    enabled: true
+    days_back: 14
+  reddit:
+    enabled: true
+    subreddits: [kickstarter, crowdfunding, hardware, 3Dprinting, ProductDesign, Entrepreneur, boardgames, EDC]
+    days_back: 7
+  producthunt:
+    enabled: true             # needs PRODUCTHUNT_TOKEN
+    days_back: 7
+  patents:
+    enabled: true             # needs PATENTSVIEW_API_KEY
+    days_back: 90
+    max_results: 100
+  accelerators:
+    enabled: true             # partnership leads from data/accelerators.yaml
+
+# Keyword lists shared by sources.
+signals:
+  preorder_apps:              # HTML fingerprints of Shopify/Woo pre-order apps
+    purple_dot: ["purpledot", "purple-dot", "getpurpledot"]
+    preproduct: ["preproduct"]
+    kaching_preorder: ["kaching-pre-order", "kaching_pre_order", "kachingpreorder"]
+    globo_preorder: ["globo-preorder", "globopreorder", "globo.preorder"]
+    downpay: ["downpay"]
+    advanced_preorder: ["advanced-pre-order", "pre-order-now-wod"]
+    timesact: ["timesact"]
+    stoq: ["stoq-preorder", "restockrocket", "stoq.ai"]
+  preorder_phrases: ["pre-order", "preorder", "ships in", "estimated delivery", "backordered", "reserve yours", "expected to ship"]
+  crowdfunding_intent: ["launching on kickstarter", "launching on indiegogo", "kickstarter campaign", "indiegogo campaign", "pre-launch", "prelaunch", "coming soon on kickstarter", "crowdfunding"]
+  icp_categories: ["consumer tech", "gadget", "edc", "everyday carry", "tabletop", "board game", "outdoor", "desk", "3d print", "laser", "robot", "wearable", "audio", "camera", "fitness", "smart home", "e-ink", "charger", "tool", "bag", "apparel", "footwear"]
+
+outreach:
+  auto_send: true             # false = write drafts only (review in the digest)
+  warmup_start_date: null     # "2026-10-06"; null = today on first send
+  warmup_schedule: [10, 15, 20, 25, 30, 40, 50]   # daily cap per week since warmup start
+  followup_days: [3, 4]       # days after the previous email: follow-up 1 on day 3, follow-up 2 on day 7 (same thread)
+  allow_guessed_emails: false # true = email hello@domain when no address is found (more volume, more bounces)
+  send_window_utc: [13, 21]   # only send between these hours (US business day)
+  auto_reply_interested: true # auto-answer interested replies with the booking link

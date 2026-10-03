@@ -1,0 +1,99 @@
+name: lead-machine
+
+on:
+  schedule:
+    - cron: "17 14 * * 1-5"      # daily run: Mon-Fri 14:17 UTC (10:17 New York)
+    - cron: "47 */3 * * *"       # inbox + follow-ups every 3 hours
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "run | replies | discover --no-send --target 5"
+        default: "run"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lead-machine            # never two runs writing the database at once
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      LEADMACHINE_DB_KEY: ${{ secrets.LEADMACHINE_DB_KEY }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+      IMAP_HOST: ${{ secrets.IMAP_HOST }}
+      NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      SEARXNG_URL: ${{ secrets.SEARXNG_URL }}
+      BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+      SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+      GOOGLE_CSE_KEY: ${{ secrets.GOOGLE_CSE_KEY }}
+      GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
+      HUNTER_API_KEY: ${{ secrets.HUNTER_API_KEY }}
+      REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+      REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      PRODUCTHUNT_TOKEN: ${{ secrets.PRODUCTHUNT_TOKEN }}
+      PATENTSVIEW_API_KEY: ${{ secrets.PATENTSVIEW_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Pick command
+        id: cmd
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "args=${{ inputs.command }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "47 */3 * * *" ]; then
+            echo "args=replies" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=run" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The encrypted database lives alone on the `lead-data` branch as a single
+      # force-pushed commit, so the repo never accumulates history of it.
+      - name: Restore lead database
+        run: |
+          test -n "$LEADMACHINE_DB_KEY" || { echo "Set the LEADMACHINE_DB_KEY secret first"; exit 1; }
+          mkdir -p data
+          set +e; git ls-remote --exit-code --heads origin lead-data >/dev/null; rc=$?; set -e
+          if [ $rc -eq 0 ]; then
+            git fetch -q origin lead-data
+            git show origin/lead-data:leads.db.enc > data/leads.db.enc
+            python -m leadmachine decrypt
+          elif [ $rc -eq 2 ]; then
+            echo "No lead-data branch yet: starting a fresh database."
+          else
+            echo "Could not reach the repository; refusing to start from an empty database."; exit 1
+          fi
+
+      - name: Run lead machine
+        run: python -m leadmachine ${{ steps.cmd.outputs.args }}
+
+      - name: Save lead database
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f data/leads.db ] || exit 0
+          python -m leadmachine encrypt
+          tmp=$(mktemp -d)
+          cp data/leads.db.enc "$tmp/"
+          cd "$tmp"
+          git init -q -b lead-data
+          git add leads.db.enc
+          git -c user.name=lead-machine-bot -c user.email=lead-machine-bot@users.noreply.github.com \
+            commit -q -m "Encrypted lead database snapshot"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" lead-data

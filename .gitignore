@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+# Lead data contains personal info: only the encrypted copy (*.enc) is committed.
+data/*.db
+data/*.db-journal
+data/*.enc
+out/
+.pytest_cache/
